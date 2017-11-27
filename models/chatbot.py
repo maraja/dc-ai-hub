@@ -1,3 +1,3 @@
-# https://chatbotsmagazine.com/contextual-chat-bots-with-tensorflow-4391749d0077
+# https://dzone.com/articles/how-i-used-deep-learning-to-train-a-chatbot-to-tal
 
 import tensorflow as tf
