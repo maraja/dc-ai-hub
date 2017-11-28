@@ -4,7 +4,7 @@ import sys
 from random import randint
 import datetime
 from sklearn.utils import shuffle
-import pickle
+import six.moves.cPickle as pickle
 import os
 # Removes an annoying Tensorflow warning
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'

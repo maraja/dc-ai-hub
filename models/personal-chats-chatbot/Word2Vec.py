@@ -80,6 +80,7 @@ vocabSize = len(wordList)
 
 sess = tf.Session()
 embeddingMatrix = tf.Variable(tf.random_uniform([vocabSize, wordVecDimensions], -1.0, 1.0))
+# get random weights based on the distribution of existing dimensions
 nceWeights = tf.Variable(tf.truncated_normal([vocabSize, wordVecDimensions], stddev=1.0 / math.sqrt(wordVecDimensions)))
 nceBiases = tf.Variable(tf.zeros([vocabSize]))
 
