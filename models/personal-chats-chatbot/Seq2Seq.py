@@ -1,5 +1,6 @@
 import tensorflow as tf 
 import numpy as np 
+import codecs
 import sys
 from random import randint
 import datetime
@@ -10,19 +11,24 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 
 def createTrainingMatrices(conversationFileName, wList, maxLen):
+	print("creating training matrices")
+	print([i for i in wList])
 	conversationDictionary = np.load(conversationFileName).item()
 	numExamples = len(conversationDictionary)
 	xTrain = np.zeros((numExamples, maxLen), dtype='int32')
 	yTrain = np.zeros((numExamples, maxLen), dtype='int32')
-	for index,(key,value) in enumerate(conversationDictionary.iteritems()):
+	for index,(key,value) in enumerate(conversationDictionary.items()):
 		# Will store integerized representation of strings here (initialized as padding)
 		encoderMessage = np.full((maxLen), wList.index('<pad>'), dtype='int32')
+		print(encoderMessage)
 		decoderMessage = np.full((maxLen), wList.index('<pad>'), dtype='int32')
 		# Getting all the individual words in the strings
 		keySplit = key.split()
 		valueSplit = value.split()
 		keyCount = len(keySplit)
 		valueCount = len(valueSplit)
+		valueIndexGlobal = 0
+		keyIndexGlobal = 0
 		# Throw out sequences that are too long
 		if (keyCount > (maxLen - 1) or valueCount > (maxLen - 1)):
 			continue
@@ -30,17 +36,22 @@ def createTrainingMatrices(conversationFileName, wList, maxLen):
 		for keyIndex, word in enumerate(keySplit):
 			try:
 				encoderMessage[keyIndex] = wList.index(word)
+				keyIndexGlobal = keyIndex
 			except ValueError:
+				print("value error")
 				# TODO: This isnt really the right way to handle this scenario
 				encoderMessage[keyIndex] = 0
-		encoderMessage[keyIndex + 1] = wList.index('<EOS>')
+		encoderMessage[keyIndexGlobal + 1] = wList.index('<EOS>')
+
 		# Integerize the decoder string
 		for valueIndex, word in enumerate(valueSplit):
 			try:
 				decoderMessage[valueIndex] = wList.index(word)
+				valueIndexGlobal = valueIndex
+				print(valueIndex, word)
 			except ValueError:
 				decoderMessage[valueIndex] = 0
-		decoderMessage[valueIndex + 1] = wList.index('<EOS>')
+		decoderMessage[valueIndexGlobal + 1] = wList.index('<EOS>')
 		xTrain[index] = encoderMessage
 		yTrain[index] = decoderMessage
 	# Remove rows with all zeros
@@ -97,12 +108,14 @@ def translateToSentences(inputs, wList, encoder=False):
 def getTestInput(inputMessage, wList, maxLen):
 	encoderMessage = np.full((maxLen), wList.index('<pad>'), dtype='int32')
 	inputSplit = inputMessage.lower().split()
+	indexGlobal = 0
 	for index,word in enumerate(inputSplit):
 		try:
 			encoderMessage[index] = wList.index(word)
+			indexGlobal = index
 		except ValueError:
 			continue
-	encoderMessage[index + 1] = wList.index('<EOS>')
+	encoderMessage[indexGlobal + 1] = wList.index('<EOS>')
 	encoderMessage = encoderMessage[::-1]
 	encoderMessageList=[]
 	for num in encoderMessage:
@@ -157,13 +170,13 @@ vocabSize = vocabSize + 2
 if (os.path.isfile('Seq2SeqXTrain.npy') and os.path.isfile('Seq2SeqYTrain.npy')):
 	xTrain = np.load('Seq2SeqXTrain.npy')
 	yTrain = np.load('Seq2SeqYTrain.npy')
-	print 'Finished loading training matrices'
+	print ('Finished loading training matrices')
 	numTrainingExamples = xTrain.shape[0]
 else:
 	numTrainingExamples, xTrain, yTrain = createTrainingMatrices('conversationDictionary.npy', wordList, maxEncoderLength)
 	np.save('Seq2SeqXTrain.npy', xTrain)
 	np.save('Seq2SeqYTrain.npy', yTrain)
-	print 'Finished creating training matrices'
+	print ('Finished creating training matrices')
 
 tf.reset_default_graph()
 
@@ -225,14 +238,14 @@ for i in range(numIterations):
 		writer.add_summary(summary, i)
 	if (i % 25 == 0 and i != 0):
 		num = randint(0,len(encoderTestStrings) - 1)
-		print encoderTestStrings[num]
+		print (encoderTestStrings[num])
 		inputVector = getTestInput(encoderTestStrings[num], wordList, maxEncoderLength);
 		feedDict = {encoderInputs[t]: inputVector[t] for t in range(maxEncoderLength)}
 		feedDict.update({decoderLabels[t]: zeroVector for t in range(maxDecoderLength)})
 		feedDict.update({decoderInputs[t]: zeroVector for t in range(maxDecoderLength)})
 		feedDict.update({feedPrevious: True})
 		ids = (sess.run(decoderPrediction, feed_dict=feedDict))
-		print idsToSentence(ids, wordList)
+		print (idsToSentence(ids, wordList))
 
 	if (i % 10000 == 0 and i != 0):
 		savePath = saver.save(sess, "models/pretrained_seq2seq.ckpt", global_step=i)
